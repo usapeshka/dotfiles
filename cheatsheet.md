@@ -24,7 +24,22 @@ git rm --cached <file>          # untrack but keep on disk
 ```
 
 **note:** `-C <repo>` runs git against a repo without `cd`-ing. For this repo:
-`git -C ~/.config diff`.
+`git -C ~/dotfiles diff`.
+
+---
+
+## Dotfiles
+
+```bash
+~/dotfiles/install.sh                # idempotent: symlinks + macOS settings
+git clone <repo> ~/dotfiles && ~/dotfiles/install.sh   # new machine, whole setup
+git -C ~/dotfiles pull               # start of a session
+```
+
+**note:** the repo lives at `~/dotfiles`, **not** `~/.config`. Only `aerospace/`
+is symlinked in (`~/.config/aerospace` → `~/dotfiles/aerospace`) because AeroSpace
+needs a fixed path. Don't move the repo back under `~/.config` — that's where CLI
+tools keep plaintext tokens, and having them outside the repo is the whole point.
 
 ---
 
@@ -57,9 +72,9 @@ needs `Alt+Shift+;` first. This is the mistake I keep making.
 ## macOS
 
 ```bash
-~/.config/macos/tuning.sh status    # current animation / Dock / shortcut state
-~/.config/macos/tuning.sh apply     # reapply (idempotent) — use on a new machine
-~/.config/macos/tuning.sh revert
+~/dotfiles/macos/tuning.sh status    # current animation / Dock / shortcut state
+~/dotfiles/macos/tuning.sh apply     # reapply (idempotent)
+~/dotfiles/macos/tuning.sh revert
 ```
 
 ```bash

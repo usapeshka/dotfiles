@@ -1,21 +1,13 @@
-# Allowlist, not a denylist.
+# This repo lives at ~/dotfiles, a directory only you write to — so a normal
+# denylist is appropriate here.
 #
-# This repo's root is ~/.config, which is where many CLI tools store
-# credentials in plaintext (gh/hosts.yml, gcloud/credentials.db,
-# configstore/*.json, ...). A denylist would require remembering to exclude
-# every tool installed from now on — forever, correctly.
-#
-# So: ignore everything at the top level, then opt in explicitly below.
-# Anything a new tool drops into ~/.config is invisible to git by default.
+# It used to be rooted at ~/.config and needed an allowlist, because CLI tools
+# stash plaintext credentials there (gh/hosts.yml, gcloud/credentials.db,
+# configstore/*.json). Moving the repo out removed that entire class of accident:
+# those files are no longer inside the repository at all, so there is no rule to
+# get right. Keep it that way — don't move this repo back under ~/.config.
 
-/*
-
-!/.gitignore
-!/aerospace/
-!/macos/
-!/cheatsheet.md
-
-# Never, anywhere — these can appear inside allowed directories too.
 .DS_Store
 *.log
 *.swp
+*.backup.*
