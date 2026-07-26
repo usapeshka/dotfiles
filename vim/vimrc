@@ -1,0 +1,98 @@
+" Vim config — lives in ~/dotfiles/vim/vimrc, symlinked to ~/.vimrc by
+" install.sh. Stack notes and mapping reference: README.md in this directory.
+"
+" Plugins are managed by vim-plug (install.sh bootstraps it). After a fresh
+" install, open vim and run :PlugInstall.
+
+set nocompatible
+
+"--------------Plugins---------------
+call plug#begin('~/.vim/plugged')
+Plug 'tpope/vim-sensible'                            " consensus defaults
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }  " fuzzy finder core
+Plug 'junegunn/fzf.vim'                              " :Files / :GFiles / :Rg etc.
+call plug#end()
+
+"--------------Visuals---------------
+set number relativenumber   " hybrid: absolute on cursor line, relative elsewhere
+set linespace=15            " MacVim only; no effect in terminal vim
+
+" silent! -> no startup error on a fresh machine before colors/ is linked
+silent! colorscheme atom-dark-256
+syntax enable
+
+" No bells, audible or visual
+set noerrorbells novisualbell t_vb=
+
+" Remove MacVim scrollbars
+set guioptions-=l guioptions-=L guioptions-=R guioptions-=r
+
+"--------------Editing---------------
+set tabstop=4 softtabstop=4 shiftwidth=4 expandtab
+set smartindent
+set backspace=indent,eol,start
+set scrolloff=6             " keep context visible around the cursor
+set hidden                  " switch buffers without nagging about unsaved changes
+
+" Persistent undo across sessions; directory is machine-local, not in the repo
+if !isdirectory($HOME . '/.vim/undo')
+    call mkdir($HOME . '/.vim/undo', 'p', 0700)
+endif
+set undodir=~/.vim/undo undofile
+
+"--------------Mappings---------------
+let mapleader = ','
+
+" Quick-edit shortcuts for configs I actually touch
+let $ZSHRC     = $HOME . '/.zshrc'
+let $AERORC    = $HOME . '/dotfiles/aerospace/aerospace.toml'
+let $TUNING    = $HOME . '/dotfiles/macos/tuning.sh'
+let $RANGERRC  = $HOME . '/.config/ranger/rc.conf'
+let $RANGERCOM = $HOME . '/.config/ranger/commands.py'
+
+nnoremap <Leader>ev :tabedit $MYVIMRC<CR>
+nnoremap <Leader>ae :tabedit $AERORC<CR>
+nnoremap <Leader>tu :tabedit $TUNING<CR>
+nnoremap <Leader>zs :tabedit $ZSHRC<CR>
+nnoremap <Leader>rr :tabedit $RANGERRC<CR>
+nnoremap <Leader>rc :tabedit $RANGERCOM<CR>
+
+" Run current file with python. Deliberately no <CR>: leaves the command line
+" open so arguments can be appended before hitting enter.
+nnoremap <Leader>pp :!python %
+
+" File navigation
+nnoremap <Leader>pv :Vex<CR>
+nnoremap <C-p> :GFiles<CR>
+nnoremap <Leader>pf :Files<CR>
+nnoremap <Leader>ct :tabclose<CR>
+
+" Paste over a visual selection without clobbering the unnamed register
+xnoremap <Leader>p "_dP
+
+" Move visual selection down/up, reindenting as it goes
+vnoremap J :m '>+1<CR>gv=gv
+vnoremap K :m '<-2<CR>gv=gv
+
+"--------------Searching---------------
+set hlsearch incsearch
+set ignorecase smartcase    " case-insensitive unless the pattern has capitals
+nnoremap <Leader><space> :nohlsearch<CR>
+
+"--------------Splits---------------
+set splitbelow splitright
+" Note: <C-L> shadows vim-sensible's clear-highlight redraw; ,<space> covers that
+nnoremap <C-J> <C-W><C-J>
+nnoremap <C-K> <C-W><C-K>
+nnoremap <C-H> <C-W><C-H>
+nnoremap <C-L> <C-W><C-L>
+
+"--------------Sourcing---------------
+nnoremap <Leader><CR> :source $MYVIMRC<CR>
+
+" Re-source automatically on save — matches both ~/.vimrc and the repo file.
+" 'nested' lets ColorScheme/Syntax autocommands fire during the re-source.
+augroup autosourcing
+    autocmd!
+    autocmd BufWritePost .vimrc,vimrc nested source $MYVIMRC
+augroup END
