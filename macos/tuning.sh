@@ -85,6 +85,26 @@ apply_keyboard() {
   defaults write -g ApplePressAndHoldEnabled -bool false
 }
 
+# ─── custom menu-item shortcuts ───────────────────────────────────────────────
+apply_shortcuts() {
+  echo "==> App Shortcuts (menu-item key equivalents)"
+
+  # Safari has no default binding for Window > Move Tab to New Window.
+  # Cmd+Option+N is free (Cmd+N = New Window, Cmd+Shift+N = Private,
+  # Ctrl+Cmd+N = New Empty Tab Group).
+  #
+  # NOTE: written to NSGlobalDomain, not com.apple.Safari. Safari's prefs live in
+  # a TCC-protected container that Terminal cannot write to without Full Disk
+  # Access. A global key equivalent matches on menu-item TITLE, so it applies to
+  # any app with that exact item — here Safari and Terminal, which is fine
+  # (same action, same key).
+  #
+  # -dict-add APPENDS, preserving existing entries.
+  defaults write -g NSUserKeyEquivalents -dict-add "Move Tab to New Window" "@~n"
+
+  echo "    (relaunch Safari/Terminal for menu shortcuts to appear)"
+}
+
 restart_ui() {
   echo "==> restarting Dock / Finder / SystemUIServer"
   killall Dock 2>/dev/null || true
@@ -95,6 +115,7 @@ restart_ui() {
 do_apply() {
   echo "tier: $TIER"
   apply_aerospace
+  apply_shortcuts
   [[ "$TIER" == "aerospace" ]] || { apply_dock; apply_animations; apply_keyboard; }
   restart_ui
   cat <<'EOF'
@@ -121,6 +142,14 @@ do_revert() {
   done
   defaults delete com.apple.finder DisableAllAnimations 2>/dev/null || true
   defaults delete com.apple.Accessibility ReduceMotionEnabled 2>/dev/null || true
+
+  # Remove ONLY our key from NSUserKeyEquivalents. A plain `defaults delete -g
+  # NSUserKeyEquivalents` would also wipe the pre-existing Hide/Minimize
+  # remappings, which are deliberate (they neutralise Cmd+H / Cmd+M so they
+  # can't hide or minimise windows out from under the tiling manager).
+  /usr/libexec/PlistBuddy -c 'Delete :NSUserKeyEquivalents:"Move Tab to New Window"' \
+    ~/Library/Preferences/.GlobalPreferences.plist 2>/dev/null || true
+  killall cfprefsd 2>/dev/null || true
 
   # These HAD values before -> restore them, don't delete.
   defaults write com.apple.dock magnification -bool true   # was 1
