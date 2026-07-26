@@ -1,2 +1,21 @@
-# macOS
+# Allowlist, not a denylist.
+#
+# This repo's root is ~/.config, which is where many CLI tools store
+# credentials in plaintext (gh/hosts.yml, gcloud/credentials.db,
+# configstore/*.json, ...). A denylist would require remembering to exclude
+# every tool installed from now on — forever, correctly.
+#
+# So: ignore everything at the top level, then opt in explicitly below.
+# Anything a new tool drops into ~/.config is invisible to git by default.
+
+/*
+
+!/.gitignore
+!/aerospace/
+!/macos/
+!/cheatsheet.md
+
+# Never, anywhere — these can appear inside allowed directories too.
 .DS_Store
+*.log
+*.swp
