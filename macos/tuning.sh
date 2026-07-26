@@ -85,24 +85,67 @@ apply_keyboard() {
   defaults write -g ApplePressAndHoldEnabled -bool false
 }
 
-# ─── custom menu-item shortcuts ───────────────────────────────────────────────
+# ─── custom menu-item shortcuts (App Shortcuts) ───────────────────────────────
+#
+# Written to NSGlobalDomain rather than per-app. Two reasons:
+#   1. Safari's prefs live in a TCC-protected container that Terminal cannot
+#      write to without granting Full Disk Access.
+#   2. A global key equivalent matches on menu-item TITLE, so one entry covers
+#      every app exposing that item — which is exactly what we want here.
+#
+# GOTCHA: "Minimize " has a TRAILING SPACE. That is not a typo. Some apps' menu
+# item is literally "Minimize " and the match is exact, so both spellings are
+# listed. Retyping this list by hand is how people end up with a binding that
+# silently does nothing.
+#
+# Format: 'Menu Item Title|KeyEquivalent'
+#   @ = Cmd   ~ = Option   ^ = Ctrl   $ = Shift
+#
+# This array is the single source of truth for BOTH apply and revert.
+SHORTCUTS=(
+  # Neutralise hide/minimise. Cmd+H and Cmd+M yank windows out of the layout
+  # where AeroSpace can no longer tile or focus them — the single most annoying
+  # macOS default for any tiling WM user. Remapped to an unreachable chord
+  # (Cmd+Option+Ctrl+Shift+M) rather than removed, because macOS offers no way
+  # to simply unbind a standard menu shortcut.
+  'Hide|@~^$m'
+  'Hide All|@~^$m'
+  'Hide Window|@~^$m'
+  'Minimize|@~^$m'
+  'Minimize |@~^$m'
+  'Minimize All|@~^$m'
+  'Minimize Window|@~^$m'
+
+  # Detach the current tab into its own window. Safari ships no binding for it.
+  # Cmd+Option+N is free: Cmd+N = New Window, Cmd+Shift+N = New Private Window,
+  # Ctrl+Cmd+N = New Empty Tab Group. Also picked up by Terminal, which has the
+  # same menu item — same action, same key, which is fine.
+  'Move Tab to New Window|@~n'
+)
+
 apply_shortcuts() {
   echo "==> App Shortcuts (menu-item key equivalents)"
+  for entry in "${SHORTCUTS[@]}"; do
+    title="${entry%%|*}"
+    keys="${entry##*|}"
+    defaults write -g NSUserKeyEquivalents -dict-add "$title" "$keys"
+    printf "    %-24s -> %s\n" "[$title]" "$keys"
+  done
+  echo "    (relaunch apps for menu shortcuts to appear)"
+}
 
-  # Safari has no default binding for Window > Move Tab to New Window.
-  # Cmd+Option+N is free (Cmd+N = New Window, Cmd+Shift+N = Private,
-  # Ctrl+Cmd+N = New Empty Tab Group).
-  #
-  # NOTE: written to NSGlobalDomain, not com.apple.Safari. Safari's prefs live in
-  # a TCC-protected container that Terminal cannot write to without Full Disk
-  # Access. A global key equivalent matches on menu-item TITLE, so it applies to
-  # any app with that exact item — here Safari and Terminal, which is fine
-  # (same action, same key).
-  #
-  # -dict-add APPENDS, preserving existing entries.
-  defaults write -g NSUserKeyEquivalents -dict-add "Move Tab to New Window" "@~n"
-
-  echo "    (relaunch Safari/Terminal for menu shortcuts to appear)"
+revert_shortcuts() {
+  echo "==> removing App Shortcuts this script manages"
+  # Delete key-by-key. A blanket `defaults delete -g NSUserKeyEquivalents` would
+  # also destroy any custom shortcuts you set by hand in System Settings.
+  for entry in "${SHORTCUTS[@]}"; do
+    title="${entry%%|*}"
+    /usr/libexec/PlistBuddy -c "Delete :NSUserKeyEquivalents:'$title'" \
+      ~/Library/Preferences/.GlobalPreferences.plist 2>/dev/null || true
+  done
+  killall cfprefsd 2>/dev/null || true
+  echo "    NOTE: this restores working Cmd+H / Cmd+M, which will hide and"
+  echo "    minimise windows out from under AeroSpace again."
 }
 
 restart_ui() {
@@ -143,13 +186,7 @@ do_revert() {
   defaults delete com.apple.finder DisableAllAnimations 2>/dev/null || true
   defaults delete com.apple.Accessibility ReduceMotionEnabled 2>/dev/null || true
 
-  # Remove ONLY our key from NSUserKeyEquivalents. A plain `defaults delete -g
-  # NSUserKeyEquivalents` would also wipe the pre-existing Hide/Minimize
-  # remappings, which are deliberate (they neutralise Cmd+H / Cmd+M so they
-  # can't hide or minimise windows out from under the tiling manager).
-  /usr/libexec/PlistBuddy -c 'Delete :NSUserKeyEquivalents:"Move Tab to New Window"' \
-    ~/Library/Preferences/.GlobalPreferences.plist 2>/dev/null || true
-  killall cfprefsd 2>/dev/null || true
+  revert_shortcuts
 
   # These HAD values before -> restore them, don't delete.
   defaults write com.apple.dock magnification -bool true   # was 1
@@ -172,6 +209,10 @@ do_status() {
            KeyRepeat InitialKeyRepeat ApplePressAndHoldEnabled; do
     printf "  %-36s %s\n" "$k" "$(defaults read -g $k 2>/dev/null || echo '(unset)')"
   done
+  echo "=== App Shortcuts (NSUserKeyEquivalents) ==="
+  /usr/libexec/PlistBuddy -c 'Print :NSUserKeyEquivalents' \
+    ~/Library/Preferences/.GlobalPreferences.plist 2>/dev/null \
+    | sed -n 's/^ *\([^=]*\) = \(.*\)/  [\1] -> \2/p' || echo "  (none set)"
   echo "=== Spaces / Accessibility ==="
   printf "  %-28s %s\n" "spans-displays" "$(defaults read com.apple.spaces spans-displays 2>/dev/null || echo '(unset)')"
   printf "  %-28s %s\n" "ReduceMotionEnabled" "$(defaults read com.apple.Accessibility ReduceMotionEnabled 2>/dev/null || echo '(unset)')"

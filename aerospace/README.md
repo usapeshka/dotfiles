@@ -486,6 +486,33 @@ window *creation*, so "all terminals → workspace 1" means every new shell you
 spawn gets yanked off your work surface. It's the rule people add on day two and
 delete on day five.
 
+### macOS-level settings
+
+These live outside `aerospace.toml`, in `../macos/tuning.sh` (`apply` / `revert` /
+`status`). The ones that matter for tiling:
+
+| Setting | Why |
+|---|---|
+| **Displays have separate Spaces → OFF** | AeroSpace's top recommendation. Enabled, it causes wrong focus on multi-monitor, perf problems, and instability in the APIs AeroSpace depends on. Needs a logout. |
+| **Group windows by application → ON** | `expose-group-apps`. AeroSpace parks hidden windows off-screen, which makes Mission Control render at absurd sizes. Documented workaround. |
+| **Automatically rearrange Spaces → OFF** | `mru-spaces`. Stops macOS reordering Spaces under the window manager. |
+| **Cmd+H / Cmd+M neutralised** | The most important one. Hide and minimise remove a window from the layout where AeroSpace can no longer tile or focus it — easy to hit by accident, confusing when you do. |
+
+macOS gives no way to *unbind* a standard menu shortcut, so hide/minimise are
+instead remapped to an unreachable chord via `NSUserKeyEquivalents`:
+
+```
+Hide · Hide All · Hide Window · Minimize · Minimize  · Minimize All · Minimize Window   →  @~^$m
+Move Tab to New Window                                                                  →  @~n
+```
+
+`@`=Cmd `~`=Option `^`=Ctrl `$`=Shift. Note `Minimize ` **with a trailing space** —
+not a typo. Some apps' menu item is literally that, and matching is exact, so both
+spellings are needed. `tuning.sh` holds the authoritative list; don't retype it.
+
+`Cmd+Option+N` (Move Tab to New Window) pairs well with tiling: detach a tab, then
+`Alt+Shift+<workspace>` to park it beside whatever it relates to.
+
 ### Modifier choice
 
 Keep `Alt` as the window-manager modifier. AeroSpace hotkeys are **global** — they
