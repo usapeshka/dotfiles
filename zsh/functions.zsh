@@ -19,7 +19,13 @@ tz() {
 # On a machine without Safari cookies, pass --cookies-from-browser chrome
 # (extra args go straight through to yt-dlp).
 #
-# Requires: brew install yt-dlp
+# Requires: brew install yt-dlp ffmpeg
+#
+# ffmpeg is not optional here: -f "bv*+ba/b" downloads video and audio as
+# separate streams, and muxing them into one mp4 is ffmpeg's job. Without it
+# yt-dlp quietly falls back to the best single-file format, which is usually
+# capped at 720p — you get a working file and no obvious reason why it's worse.
+# Hence the explicit warning below rather than letting it degrade in silence.
 yt() {
   if [[ -z "$1" ]]; then
     echo "Usage: yt <youtube-url> [extra yt-dlp args...]"
@@ -28,6 +34,10 @@ yt() {
   if ! command -v yt-dlp >/dev/null; then
     echo "yt: yt-dlp not installed (brew install yt-dlp)" >&2
     return 127
+  fi
+  if ! command -v ffmpeg >/dev/null; then
+    echo "yt: WARNING ffmpeg missing — cannot merge streams, quality will be" >&2
+    echo "    capped at the best single-file format (brew install ffmpeg)" >&2
   fi
 
   local today outdir
