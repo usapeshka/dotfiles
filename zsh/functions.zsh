@@ -53,6 +53,17 @@ yt() {
     "$@"
 }
 
+# YouTube URLs contain ? and often & — both are zsh glob characters. Unlike bash,
+# zsh treats a non-matching glob as a hard error and aborts the whole command:
+#
+#     $ yt https://youtu.be/abc?si=xyz
+#     zsh: no matches found: https://youtu.be/abc?si=xyz
+#
+# ...and yt never runs. `noglob` disables filename expansion for this command
+# only, so URLs can be pasted bare. Preferred over `setopt NO_NOMATCH`, which
+# would change glob behaviour for every command in the shell.
+alias yt='noglob yt'
+
 # m3u — build a playlist of every audio/video file under the current
 # directory, sorted, with paths relative to here. Name defaults to the
 # directory's own name.
