@@ -1,0 +1,178 @@
+# AeroSpace config — https://nikitabobko.github.io/AeroSpace/guide
+# Starter config: i3-style defaults, trimmed down from the bundled default.
+
+config-version = 2
+
+start-at-login = true
+
+# Reload automatically when this file is saved.
+# (Already active — if you ever edit before AeroSpace is running, reload once
+# manually with `aerospace reload-config`.)
+auto-reload-config = true
+
+after-startup-command = []
+
+# Normalizations keep the layout tree tidy. Leave these on until you have a
+# reason not to. See guide#normalization
+enable-normalization-flatten-containers = true
+enable-normalization-opposite-orientation-for-nested-containers = true
+
+# tiles|accordion
+default-root-container-layout = 'tiles'
+# horizontal|vertical|auto ('auto' = wide monitor gets horizontal)
+default-root-container-orientation = 'auto'
+
+# Size of the accordion peek when using accordion layout
+accordion-padding = 30
+
+# Warp the mouse to the newly focused monitor so it doesn't get lost
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+
+# Set to true if you want focus to track the pointer
+focus-follows-mouse.enabled = false
+
+automatically-unhide-macos-hidden-apps = false
+
+key-mapping.preset = 'qwerty'
+
+# Small gaps so tile edges are visible. Set all to 0 for edge-to-edge.
+gaps.inner.horizontal = 8
+gaps.inner.vertical   = 8
+gaps.outer.left       = 8
+gaps.outer.bottom     = 8
+gaps.outer.top        = 8
+gaps.outer.right      = 8
+
+# Keep these workspaces alive even when empty, so they don't vanish from the
+# menubar / `aerospace list-workspaces` when you leave them.
+#   Numbers 1-4 -> MacBook (control center: terminal, files, chat, music)
+#   Letters A/S/D/G -> external monitor (work surface: IDE, browser, DB, scratch)
+persistent-workspaces = ["1", "2", "3", "4", "A", "S", "D", "G"]
+
+# Monitor pinning lives in [workspace-to-monitor-force-assignment] at the very
+# bottom of this file (TOML: everything after a table header belongs to it).
+
+on-mode-changed = []
+
+# ─── window rules ─────────────────────────────────────────────────────────────
+# Apps that should never be tiled. Match on bundle id — find one with:
+#   osascript -e 'id of app "Some App"'
+# or read it off a running window with `aerospace list-windows --all --format '%{app-bundle-id} %{app-name}'`
+
+# System Settings — small utility window, tiling it just squashes the layout.
+[[on-window-detected]]
+if.app-id = 'com.apple.systempreferences'
+run = 'layout floating'
+
+# VLC. Not installed here yet; this is VLC's canonical bundle id, so the rule
+# sits dormant until you install it. Verify with the osascript above if it
+# doesn't take effect.
+[[on-window-detected]]
+if.app-id = 'org.videolan.vlc'
+run = 'layout floating'
+
+# ─── main mode ────────────────────────────────────────────────────────────────
+# Modifiers: cmd, alt, ctrl, shift.  Full command list: guide + /commands
+[mode.main.binding]
+
+    # New terminal window, HERE (i3's alt-enter).
+    #
+    # 'do script ""' creates a brand-new window rather than activating Terminal.
+    # That distinction is the whole point: macOS apps are single-instance, so
+    # *activating* an already-running app raises its existing window and AeroSpace
+    # follows focus to whatever workspace that window lives on — you get yanked
+    # away. Creating a window instead makes it appear on the CURRENTLY focused
+    # workspace, which is what you actually want.
+    #
+    # Deliberately no 'to activate' here: verified the new window already takes
+    # keyboard focus without it, and activate is the exact call that can teleport.
+    alt-enter = '''exec-and-forget osascript -e 'tell application "Terminal" to do script ""' '''
+
+    # Layout switching
+    alt-slash = 'layout tiles horizontal vertical'   # toggle split direction
+    alt-comma = 'layout accordion horizontal vertical'
+    alt-f     = 'fullscreen'
+    alt-shift-space = 'layout floating tiling'       # float / unfloat window
+
+    # Focus (vim keys)
+    alt-h = 'focus left'
+    alt-j = 'focus down'
+    alt-k = 'focus up'
+    alt-l = 'focus right'
+
+    # Move the focused window
+    alt-shift-h = 'move left'
+    alt-shift-j = 'move down'
+    alt-shift-k = 'move up'
+    alt-shift-l = 'move right'
+
+    # Resize
+    alt-minus = 'resize smart -50'
+    alt-equal = 'resize smart +50'
+    # Make ALL windows on screen truly equal size.
+    # Flattens any nesting first, so N windows each get exactly 1/N of the
+    # screen. This is the one you want most of the time.
+    alt-b = ['flatten-workspace-tree', 'balance-sizes']
+    # Balance within the existing tree structure, preserving nesting/grouping.
+    alt-shift-b = 'balance-sizes'
+
+    # Switch workspace — numbers = MacBook, letters (home row) = external
+    alt-1 = 'workspace 1'   # Terminal
+    alt-2 = 'workspace 2'   # Finder / files
+    alt-3 = 'workspace 3'   # Slack / Messages / Mail
+    alt-4 = 'workspace 4'   # Music / utilities
+
+    alt-a = 'workspace A'   # IDE / VS Code
+    alt-s = 'workspace S'   # Browser / docs
+    alt-d = 'workspace D'   # Database / API tools
+    alt-g = 'workspace G'   # Scratch / temporary
+
+    # Send focused window to a workspace (and follow it)
+    alt-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
+    alt-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
+    alt-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'
+    alt-shift-4 = 'move-node-to-workspace 4 --focus-follows-window'
+
+    alt-shift-a = 'move-node-to-workspace A --focus-follows-window'
+    alt-shift-s = 'move-node-to-workspace S --focus-follows-window'
+    alt-shift-d = 'move-node-to-workspace D --focus-follows-window'
+    alt-shift-g = 'move-node-to-workspace G --focus-follows-window'
+
+    # Jump back to the previous workspace
+    alt-tab = 'workspace-back-and-forth'
+    # Throw the current workspace onto the next monitor
+    alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
+
+    # Enter service mode
+    alt-shift-semicolon = 'mode service'
+
+# ─── service mode ─────────────────────────────────────────────────────────────
+# Entered with alt-shift-; — each binding runs then drops back to main.
+[mode.service.binding]
+    esc       = ['reload-config', 'mode main']
+    r         = ['flatten-workspace-tree', 'balance-sizes', 'mode main']  # reset layout + equalize
+    b         = ['balance-sizes', 'mode main']               # equalize sizes only
+    f         = ['layout floating tiling', 'mode main']
+    backspace = ['close-all-windows-but-current', 'mode main']
+
+    alt-shift-h = ['join-with left', 'mode main']
+    alt-shift-j = ['join-with down', 'mode main']
+    alt-shift-k = ['join-with up', 'mode main']
+    alt-shift-l = ['join-with right', 'mode main']
+
+# ─── monitor pinning ──────────────────────────────────────────────────────────
+# Keep this table LAST: in TOML every key after a table header belongs to that
+# table, so anything added below here becomes a workspace assignment.
+#
+# 'secondary' = "any monitor that isn't the built-in one", so this survives
+# swapping the DELL for a different external. With no external attached (or lid
+# closed), AeroSpace falls back to the only monitor present — nothing is lost.
+[workspace-to-monitor-force-assignment]
+1 = 'built-in'
+2 = 'built-in'
+3 = 'built-in'
+4 = 'built-in'
+A = 'secondary'
+S = 'secondary'
+D = 'secondary'
+G = 'secondary'
