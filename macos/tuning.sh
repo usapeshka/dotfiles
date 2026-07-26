@@ -1,20 +1,72 @@
 #!/usr/bin/env bash
-# macOS responsiveness tuning — MacBook Air M5, macOS 26.5.2, AeroSpace user.
+# macOS responsiveness tuning for an AeroSpace user.
 #
 #   ./tuning.sh apply  [tier]     tier = aerospace | balanced | aggressive  (default: balanced)
-#   ./tuning.sh revert            restores the state observed before first run
+#   ./tuning.sh revert            restores the state captured before the first apply
 #   ./tuning.sh status            show current values
+#
+# The first `apply` snapshots every key it is about to touch (value or unset)
+# to $STATE_FILE; `revert` replays that snapshot, so it restores THIS machine's
+# actual prior state rather than values hardcoded from some other machine.
 #
 # Every change here is a user-level `defaults` key. Nothing needs sudo, nothing
 # touches SIP, nothing is destructive. `revert` puts it all back.
 #
 # CAVEAT: `defaults write` always succeeds — it just stores a key. It does NOT
 # prove macOS still honours that key. Several long-circulated tweaks became inert
-# in recent macOS releases. Keys flagged UNVERIFIED below are ones I could not
-# confirm still have an effect on macOS 26; harmless to set, may do nothing.
+# in recent macOS releases, and everything here was only verified on the author's
+# machine at the time of writing. Keys flagged UNVERIFIED are ones I could not
+# confirm have an effect even there; all are harmless to set, any may do nothing
+# on your macOS release.
 
 set -euo pipefail
 TIER="${2:-balanced}"
+
+STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/macos-tuning.pre"
+
+# Every key `apply` may touch, with its plist type. Single source of truth for
+# the pre-apply snapshot and for revert. Format: 'domain|key|type'.
+# (NSUserKeyEquivalents is handled separately by SHORTCUTS below — revert must
+# delete entry-by-entry, not restore the whole dict, to spare hand-set ones.)
+MANAGED_KEYS=(
+  'com.apple.dock|expose-group-apps|bool'
+  'com.apple.dock|mru-spaces|bool'
+  'com.apple.dock|autohide-delay|float'
+  'com.apple.dock|autohide-time-modifier|float'
+  'com.apple.dock|no-bouncing|bool'
+  'com.apple.dock|magnification|bool'
+  'com.apple.dock|launchanim|bool'
+  'com.apple.dock|mineffect|string'
+  'com.apple.dock|show-recents|bool'
+  'com.apple.dock|expose-animation-duration|float'
+  'com.apple.spaces|spans-displays|bool'
+  'com.apple.finder|DisableAllAnimations|bool'
+  'com.apple.Accessibility|ReduceMotionEnabled|bool'
+  'NSGlobalDomain|NSAutomaticWindowAnimationsEnabled|bool'
+  'NSGlobalDomain|NSWindowResizeTime|float'
+  'NSGlobalDomain|QLPanelAnimationDuration|float'
+  'NSGlobalDomain|KeyRepeat|int'
+  'NSGlobalDomain|InitialKeyRepeat|int'
+  'NSGlobalDomain|ApplePressAndHoldEnabled|bool'
+)
+
+# Record the current value (or unset-ness) of every managed key, once. Runs
+# before the first apply writes anything; later applies keep the original
+# baseline. Format per line: 'domain|key|type|value-or-(unset)'.
+snapshot_state() {
+  if [ -f "$STATE_FILE" ]; then
+    echo "==> pre-tuning snapshot already exists: $STATE_FILE"
+    return
+  fi
+  echo "==> snapshotting pre-tuning state -> $STATE_FILE"
+  mkdir -p "$(dirname "$STATE_FILE")"
+  local spec domain key type value
+  for spec in "${MANAGED_KEYS[@]}"; do
+    IFS='|' read -r domain key type <<<"$spec"
+    value="$(defaults read "$domain" "$key" 2>/dev/null || echo '(unset)')"
+    printf '%s|%s|%s|%s\n' "$domain" "$key" "$type" "$value"
+  done > "$STATE_FILE"
+}
 
 # ─── things AeroSpace itself recommends ───────────────────────────────────────
 apply_aerospace() {
@@ -102,6 +154,7 @@ apply_keyboard() {
 #   @ = Cmd   ~ = Option   ^ = Ctrl   $ = Shift
 #
 # This array is the single source of truth for BOTH apply and revert.
+# shellcheck disable=SC2016  # '$m' below is a literal Shift-glyph, not a variable
 SHORTCUTS=(
   # Neutralise hide/minimise. Cmd+H and Cmd+M yank windows out of the layout
   # where AeroSpace can no longer tile or focus them — the single most annoying
@@ -157,6 +210,7 @@ restart_ui() {
 
 do_apply() {
   echo "tier: $TIER"
+  snapshot_state
   apply_aerospace
   apply_shortcuts
   [[ "$TIER" == "aerospace" ]] || { apply_dock; apply_animations; apply_keyboard; }
@@ -170,31 +224,40 @@ Done. Notes:
 EOF
 }
 
-# ─── revert to the state observed before any of this was applied ──────────────
+# ─── revert to the state captured before the first apply ──────────────────────
 do_revert() {
   echo "==> reverting to pre-tuning state"
 
-  # These were UNSET originally -> delete them.
-  for k in autohide-delay autohide-time-modifier no-bouncing \
-           expose-animation-duration expose-group-apps; do
-    defaults delete com.apple.dock "$k" 2>/dev/null || true
-  done
-  for k in NSAutomaticWindowAnimationsEnabled NSWindowResizeTime \
-           QLPanelAnimationDuration ApplePressAndHoldEnabled; do
-    defaults delete -g "$k" 2>/dev/null || true
-  done
-  defaults delete com.apple.finder DisableAllAnimations 2>/dev/null || true
-  defaults delete com.apple.Accessibility ReduceMotionEnabled 2>/dev/null || true
+  if [ -f "$STATE_FILE" ]; then
+    local domain key type value
+    while IFS='|' read -r domain key type value; do
+      if [ "$value" = "(unset)" ]; then
+        defaults delete "$domain" "$key" 2>/dev/null || true
+        printf '    deleted  %s %s\n' "$domain" "$key"
+      else
+        # `defaults read` prints bools as 0/1; `defaults write -bool` wants words.
+        if [ "$type" = "bool" ]; then
+          case "$value" in 1) value=true ;; 0) value=false ;; esac
+        fi
+        defaults write "$domain" "$key" "-$type" "$value"
+        printf '    restored %s %s = %s\n' "$domain" "$key" "$value"
+      fi
+    done < "$STATE_FILE"
+    rm -f "$STATE_FILE"   # gone on purpose: the next apply takes a fresh baseline
+  else
+    echo "    NO SNAPSHOT at $STATE_FILE (apply never ran on this machine?)."
+    echo "    Falling back to deleting every managed key — that restores macOS"
+    echo "    *defaults*, not whatever custom values you had before."
+    local spec domain key type
+    for spec in "${MANAGED_KEYS[@]}"; do
+      IFS='|' read -r domain key type <<<"$spec"
+      defaults delete "$domain" "$key" 2>/dev/null || true
+    done
+  fi
 
   revert_shortcuts
-
-  # These HAD values before -> restore them, don't delete.
-  defaults write com.apple.dock magnification -bool true   # was 1
-  defaults write -g KeyRepeat -int 2                       # was 2
-  defaults write -g InitialKeyRepeat -int 15               # was 15
-
   restart_ui
-  echo "Reverted. spans-displays / mru-spaces / launchanim left as-is (already yours)."
+  echo "Reverted."
 }
 
 do_status() {
@@ -202,12 +265,12 @@ do_status() {
   for k in autohide autohide-delay autohide-time-modifier mineffect launchanim \
            magnification no-bouncing expose-animation-duration expose-group-apps \
            mru-spaces show-recents tilesize; do
-    printf "  %-28s %s\n" "$k" "$(defaults read com.apple.dock $k 2>/dev/null || echo '(unset)')"
+    printf "  %-28s %s\n" "$k" "$(defaults read com.apple.dock "$k" 2>/dev/null || echo '(unset)')"
   done
   echo "=== Global ==="
   for k in NSAutomaticWindowAnimationsEnabled NSWindowResizeTime QLPanelAnimationDuration \
            KeyRepeat InitialKeyRepeat ApplePressAndHoldEnabled; do
-    printf "  %-36s %s\n" "$k" "$(defaults read -g $k 2>/dev/null || echo '(unset)')"
+    printf "  %-36s %s\n" "$k" "$(defaults read -g "$k" 2>/dev/null || echo '(unset)')"
   done
   echo "=== App Shortcuts (NSUserKeyEquivalents) ==="
   /usr/libexec/PlistBuddy -c 'Print :NSUserKeyEquivalents' \
@@ -217,6 +280,12 @@ do_status() {
   printf "  %-28s %s\n" "spans-displays" "$(defaults read com.apple.spaces spans-displays 2>/dev/null || echo '(unset)')"
   printf "  %-28s %s\n" "ReduceMotionEnabled" "$(defaults read com.apple.Accessibility ReduceMotionEnabled 2>/dev/null || echo '(unset)')"
   printf "  %-28s %s\n" "reduceTransparency" "$(defaults read com.apple.universalaccess reduceTransparency 2>/dev/null || echo '(unset)')"
+  echo "=== Snapshot ==="
+  if [ -f "$STATE_FILE" ]; then
+    printf "  pre-tuning snapshot: %s\n" "$STATE_FILE"
+  else
+    echo "  pre-tuning snapshot: (none — apply has not run yet)"
+  fi
 }
 
 case "${1:-}" in
