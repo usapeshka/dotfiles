@@ -31,7 +31,7 @@ git rm --cached <file>          # untrack but keep on disk
 ## Dotfiles
 
 ```bash
-~/dotfiles/install.sh                # idempotent: symlinks + macOS settings
+~/dotfiles/install.sh                # idempotent: installs AeroSpace + symlinks + macOS settings
 git clone <repo> ~/dotfiles && ~/dotfiles/install.sh   # new machine, whole setup
 git -C ~/dotfiles pull               # start of a session
 ```
@@ -109,11 +109,34 @@ item *title*, so it works across apps.
 
 ---
 
+## Vim
+
+```bash
+vim +PlugInstall +qall               # fetch plugins after a fresh install
+```
+
+```vim
+:PlugStatus                          " installed vs declared in vimrc
+:verbose nmap <keys>                 " what's bound and which file bound it
+```
+
+**note:** deeper docs — stack, mappings, gotchas → [`vim/README.md`](vim/README.md).
+Leader is `,`. `Ctrl+P` = git files, `,pf` = all files, `,ev` = edit vimrc.
+
+---
+
 ## Shell
 
 ```bash
 command -v <cmd>        # is it installed, and where
+tz                      # time in CHI / NYC / MSK + epoch
+yt <url>                # download video -> ~/Videos/youtube/<today>/  (Safari cookies)
+m3u [name]              # playlist of all audio/video under . (default: dirname.m3u)
 ```
+
+**note:** these live in [`zsh/functions.zsh`](zsh/functions.zsh), sourced from
+`~/.zshrc`. `yt` extra args pass through to yt-dlp, e.g.
+`yt <url> --cookies-from-browser chrome`.
 
 ---
 

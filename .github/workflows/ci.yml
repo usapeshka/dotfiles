@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash syntax
+        run: |
+          bash -n install.sh
+          bash -n macos/tuning.sh
+
+      - name: shellcheck
+        run: shellcheck install.sh macos/tuning.sh
+
+      - name: validate aerospace.toml
+        run: python3 -c "import tomllib; tomllib.load(open('aerospace/aerospace.toml','rb'))"
+
+      - name: zsh syntax
+        run: |
+          sudo apt-get install -y -qq zsh
+          zsh -n zsh/functions.zsh
