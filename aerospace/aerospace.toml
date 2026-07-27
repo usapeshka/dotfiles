@@ -138,6 +138,11 @@ run = 'layout floating'
     alt-shift-d = 'move-node-to-workspace D --focus-follows-window'
     alt-shift-g = 'move-node-to-workspace G --focus-follows-window'
 
+    # Bounce focus to the other monitor — lands on whatever workspace is
+    # currently visible there (e.g. *1|S -> 1|*S and back). With >2 monitors
+    # it cycles through them in order.
+    alt-shift-m = 'focus-monitor --wrap-around next'
+
     # Jump back to the previous workspace
     alt-tab = 'workspace-back-and-forth'
     # Throw the current workspace onto the next monitor

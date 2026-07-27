@@ -24,6 +24,7 @@ Everything here was verified against AeroSpace 0.21.3-Beta on this machine.
 | `Alt+A/S/D/G` | Workspace A/S/D/G (MacBook) |
 | `Alt+Shift+<same>` | Send window to that workspace, follow it |
 | `Alt+Tab` | Previous workspace |
+| `Alt+Shift+M` | Focus the other monitor — lands on whatever workspace is visible there (`*1\|S` ↔ `1\|*S`) |
 | `Alt+Shift+;` | Service mode (then `Esc` to leave) |
 
 Service mode extras: `R` reset · `Shift+R` sort every window to its home workspace (`sort-windows.sh`) · `B` balance · `F` float · `Backspace` close all but current · `Esc` reload config.
@@ -85,6 +86,12 @@ often on the external (it's where the active work lives), and `Alt+1..4` is
 the easiest chord to hit — so the numbers go to the monitor you switch on
 most. (This is a swap of the original layout, which had numbers on the
 laptop and letters on the external.)
+
+To hop between the two monitors without thinking about workspace names at
+all, `Alt+Shift+M` focuses the other monitor — it lands on whatever
+workspace happens to be visible there, so it stays correct no matter what
+you have open. The mouse warps along with focus
+(`on-focused-monitor-changed`).
 
 Suggested purposes (consistency builds muscle memory):
 
