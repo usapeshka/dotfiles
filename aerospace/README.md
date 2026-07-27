@@ -445,6 +445,7 @@ Fixes, pick one:
   Profiles → Keyboard). The leak then types a harmless `⁄`-style character
   instead of `ESC`. Costs Option+Enter-as-newline in Claude Code — type `\`
   then Enter instead. Re-running `/terminal-setup` re-enables it — remember why.
+  **← applied on this machine** (fira profile, 2026-07-27).
 - **Rebind AeroSpace to `ctrl-alt-…`** — Terminal never translates Ctrl chords
   into `ESC` sequences, so leaks become inert. Costs muscle memory.
 - **Switch to iTerm2 / Ghostty** — they don't exhibit the leak, and support
