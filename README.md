@@ -26,8 +26,9 @@ is printed at the end.
 
 | Path | What |
 |---|---|
-| [`aerospace/aerospace.toml`](aerospace/aerospace.toml) | AeroSpace config — i3-style, workspaces 1–4 on the laptop, A/S/D/G on the external |
+| [`aerospace/aerospace.toml`](aerospace/aerospace.toml) | AeroSpace config — i3-style, workspaces 1–4 on the external, A/S/D/G on the laptop |
 | [`aerospace/README.md`](aerospace/README.md) | Deep guide: the tiling mental model, recipes, gotchas — all verified |
+| [`aerospace/sort-windows.sh`](aerospace/sort-windows.sh) | Sort every window to its home workspace by app type (service mode `Shift+R`) |
 | [`macos/tuning.sh`](macos/tuning.sh) | macOS responsiveness tuning: `apply [tier]` / `revert` / `status` |
 | [`vim/vimrc`](vim/vimrc) | Vim config — vim-plug, vim-sensible, fzf, atom-dark |
 | [`vim/README.md`](vim/README.md) | Stack notes: what each piece is for, mappings, gotchas |

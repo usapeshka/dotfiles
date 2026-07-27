@@ -20,13 +20,13 @@ Everything here was verified against AeroSpace 0.21.3-Beta on this machine.
 | `Alt+-` / `Alt+=` | Shrink / grow |
 | `Alt+B` | **Reset**: flatten all nesting + equalise |
 | `Alt+Shift+B` | Equalise only (keeps nesting) |
-| `Alt+1..4` | Workspace 1–4 (MacBook) |
-| `Alt+A/S/D/G` | Workspace A/S/D/G (external) |
+| `Alt+1..4` | Workspace 1–4 (external) |
+| `Alt+A/S/D/G` | Workspace A/S/D/G (MacBook) |
 | `Alt+Shift+<same>` | Send window to that workspace, follow it |
 | `Alt+Tab` | Previous workspace |
 | `Alt+Shift+;` | Service mode (then `Esc` to leave) |
 
-Service mode extras: `R` reset · `B` balance · `F` float · `Backspace` close all but current · `Esc` reload config.
+Service mode extras: `R` reset · `Shift+R` sort every window to its home workspace (`sort-windows.sh`) · `B` balance · `F` float · `Backspace` close all but current · `Esc` reload config.
 
 ---
 
@@ -71,30 +71,33 @@ External monitor sits **above** the MacBook. Arrange macOS Displays the same way
 
 ```
       ┌──────────────────────────┐
-      │   DELL U2723QE           │   A  S  D  G   ← work surface
+      │   HP                     │   1  2  3  4   ← main surface
       │   (external)             │
       └──────────────────────────┘
                    ▲
       ┌──────────────────────────┐
-      │   MacBook built-in       │   1  2  3  4   ← control centre
+      │   MacBook built-in       │   A  S  D  G   ← side surface
       └──────────────────────────┘
 ```
 
-Numbers = laptop. Letters = external. `A/S/D/G` are home-row keys, so
-`Alt+A/S/D/G` needs no reaching.
+Numbers = external. Letters = laptop. Workspace switching happens far more
+often on the external (it's where the active work lives), and `Alt+1..4` is
+the easiest chord to hit — so the numbers go to the monitor you switch on
+most. (This is a swap of the original layout, which had numbers on the
+laptop and letters on the external.)
 
 Suggested purposes (consistency builds muscle memory):
 
 | WS | Monitor | Purpose |
 |---|---|---|
-| 1 | MacBook | Terminal / ad-hoc shell |
-| 2 | MacBook | Finder / files |
-| 3 | MacBook | Slack / Messages / Mail |
-| 4 | MacBook | Music / utilities |
-| A | External | IDE / editor |
-| S | External | Browser / docs |
-| D | External | Database / API tools |
-| G | External | Scratch / temporary |
+| 1 | External | Terminal / ad-hoc shell |
+| 2 | External | Finder / files |
+| 3 | External | Slack / Messages / Mail |
+| 4 | External | Music / utilities |
+| A | MacBook | IDE / editor |
+| S | MacBook | Browser / docs |
+| D | MacBook | Database / API tools |
+| G | MacBook | Scratch / temporary |
 
 Pinning is enforced by `[workspace-to-monitor-force-assignment]` at the bottom
 of `aerospace.toml`.
@@ -105,8 +108,8 @@ The "one app per workspace" model is a good *starter* model and a bad
 *steady-state* model. Terminals and browsers want to sit **beside** the thing
 they act on — pinning them fights the whole point of tiling.
 
-So: laptop numbers lean app-pinned (Slack, Music, Mail — singletons you visit).
-External letters are **task**-scoped: workspace A is "the auth refactor", holding
+So: numbers lean app-pinned (Slack, Music, Mail — singletons you visit).
+Letters are **task**-scoped: workspace A is "the auth refactor", holding
 whatever editor + terminal + browser that work needs.
 
 Read the table above as *purpose*, not *inventory*. Workspace 1 is not "every
@@ -279,6 +282,7 @@ do nothing — AeroSpace says `No windows in the specified direction` and nothin
 |---|---|
 | `Alt+B` | **Full reset** — flatten all nesting + equalise |
 | `Alt+Shift+B` | Equalise only, **keeps** nesting |
+| `Alt+Shift+;` → `Shift+R` | **Sort**: send every window to its home workspace (`sort-windows.sh`), then flatten + equalise all workspaces |
 
 Don't untangle a bad tree — flatten it and rebuild. It's three keystrokes.
 
@@ -422,6 +426,30 @@ below it silently becomes a workspace assignment.
 **`Alt+Shift+Tab`** (`move-workspace-to-monitor`) fights the force-assignment:
 it moves a workspace, then AeroSpace pulls it back. Harmless but confusing.
 
+**Apple Terminal + "Option as Meta" leaks `Esc` — and interrupts Claude Code.**
+AeroSpace hotkeys are supposed to be consumed before the focused app sees them,
+but with the stock macOS Terminal focused the `Alt+…` keypress *also* reaches
+the terminal (long-standing AeroSpace ↔ Apple Terminal friction, see
+[nikitabobko/AeroSpace#555](https://github.com/nikitabobko/AeroSpace/issues/555)).
+If the Terminal profile has **"Use Option as Meta Key"** enabled (Claude Code's
+`/terminal-setup` turns it on for Option+Enter newlines), the leaked
+`Alt+Shift+1` arrives as `ESC !` — and a stray `ESC` is exactly the
+"interrupt the current turn" key in Claude Code (also cancels pending input in
+vim, tmux, etc.). Net effect: moving a window with `Alt+Shift+<ws>` aborts
+whatever Claude is doing in that terminal.
+
+Verify it: run `cat -v`, press `Alt+Shift+1` — `^[!` appears.
+
+Fixes, pick one:
+- **Disable "Use Option as Meta Key"** for the profile (Terminal → Settings →
+  Profiles → Keyboard). The leak then types a harmless `⁄`-style character
+  instead of `ESC`. Costs Option+Enter-as-newline in Claude Code — type `\`
+  then Enter instead. Re-running `/terminal-setup` re-enables it — remember why.
+- **Rebind AeroSpace to `ctrl-alt-…`** — Terminal never translates Ctrl chords
+  into `ESC` sequences, so leaks become inert. Costs muscle memory.
+- **Switch to iTerm2 / Ghostty** — they don't exhibit the leak, and support
+  "Option as Esc+" per-side. Cleanest long-term, biggest change.
+
 ---
 
 ## 11. Config settings worth understanding
@@ -516,7 +544,8 @@ spellings are needed. `tuning.sh` holds the authoritative list; don't retype it.
 ### Modifier choice
 
 Keep `Alt` as the window-manager modifier. AeroSpace hotkeys are **global** — they
-consume the keypress before the app sees it — so binding `Cmd+…` removes that
+consume the keypress before the app sees it (exception: stock Apple Terminal
+leaks the keypress through, see §10) — so binding `Cmd+…` removes that
 shortcut from every app. `Cmd+Enter` is real elsewhere (Safari address bar,
 Spotlight reveal-in-Finder, VS Code, most chat apps, iTerm2 fullscreen).
 
@@ -550,5 +579,5 @@ Reach for a grid when you actually need four things visible at once.
 **Add automation last.** Move windows by hand until you *know* which apps always
 belong in one place. That list is far shorter than it feels on day one.
 
-**A useful morning shape:** external on `A` with the editor, laptop on `1` with a
-terminal, and everything else a single keystroke away.
+**A useful morning shape:** external on `1` with a terminal, laptop on `A` with the
+editor, and everything else a single keystroke away.
