@@ -45,8 +45,8 @@ gaps.outer.right      = 8
 
 # Keep these workspaces alive even when empty, so they don't vanish from the
 # menubar / `aerospace list-workspaces` when you leave them.
-#   Numbers 1-4 -> MacBook (control center: terminal, files, chat, music)
-#   Letters A/S/D/G -> external monitor (work surface: IDE, browser, DB, scratch)
+#   Numbers 1-4 -> external monitor (terminal, files, chat, music)
+#   Letters A/S/D/G -> MacBook (IDE, browser, DB, scratch)
 persistent-workspaces = ["1", "2", "3", "4", "A", "S", "D", "G"]
 
 # Monitor pinning lives in [workspace-to-monitor-force-assignment] at the very
@@ -116,7 +116,7 @@ run = 'layout floating'
     # Balance within the existing tree structure, preserving nesting/grouping.
     alt-shift-b = 'balance-sizes'
 
-    # Switch workspace — numbers = MacBook, letters (home row) = external
+    # Switch workspace — numbers = external, letters (home row) = build-in
     alt-1 = 'workspace 1'   # Terminal
     alt-2 = 'workspace 2'   # Finder / files
     alt-3 = 'workspace 3'   # Slack / Messages / Mail
@@ -151,6 +151,10 @@ run = 'layout floating'
 [mode.service.binding]
     esc       = ['reload-config', 'mode main']
     r         = ['flatten-workspace-tree', 'balance-sizes', 'mode main']  # reset layout + equalize
+    # Big reset: sort every window to its home workspace by app type
+    # (Terminal->1, Slack->3, OpenVPN->4, Cursor->A, Chrome->S, ...), then
+    # flatten + balance ALL workspaces. Mapping lives in sort-windows.sh.
+    shift-r   = ['exec-and-forget ~/.config/aerospace/sort-windows.sh', 'mode main']
     b         = ['balance-sizes', 'mode main']               # equalize sizes only
     f         = ['layout floating tiling', 'mode main']
     backspace = ['close-all-windows-but-current', 'mode main']
@@ -164,15 +168,18 @@ run = 'layout floating'
 # Keep this table LAST: in TOML every key after a table header belongs to that
 # table, so anything added below here becomes a workspace assignment.
 #
-# 'secondary' = "any monitor that isn't the built-in one", so this survives
-# swapping the DELL for a different external. With no external attached (or lid
-# closed), AeroSpace falls back to the only monitor present — nothing is lost.
+# NOTE: 'secondary' means "not the macOS main display" (main = menu bar monitor
+# in System Settings → Displays), NOT "not built-in". The HP is currently the
+# macOS main display, so 'secondary' would resolve to the built-in Retina.
+# Digits therefore match the external by name ('HP' is a case-insensitive
+# substring match), with 'secondary' as a fallback for a different external.
+# With no external attached, everything falls back to the only monitor present.
 [workspace-to-monitor-force-assignment]
-1 = 'built-in'
-2 = 'built-in'
-3 = 'built-in'
-4 = 'built-in'
-A = 'secondary'
-S = 'secondary'
-D = 'secondary'
-G = 'secondary'
+1 = ['HP', 'secondary']
+2 = ['HP', 'secondary']
+3 = ['HP', 'secondary']
+4 = ['HP', 'secondary']
+A = 'built-in'
+S = 'built-in'
+D = 'built-in'
+G = 'built-in'
